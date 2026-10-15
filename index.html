@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Juegos del Tiempo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@500;700;800;900&display=swap">
+<style>
+/* Layout: one centred column; a sticky scoreboard bar, then either the game menu (card grid) or one game screen. Palette follows the class slides: cream, orange slab titles, blue clock, violet labels. */
+:root {
+  --bg: #FFF4DB;
+  --surface: #FFFFFF;
+  --surface-2: #FBEBC6;
+  --ink: #26243A;
+  --muted: #6A6580;
+  --line: #E9D6A8;
+  --accent: #E25A33;
+  --on-accent: #FFFFFF;
+  --blue: #3A8EE6;
+  --blue-soft: #DCEBFC;
+  --violet: #7656DE;
+  --good: #23874D;
+  --good-soft: #DDF3E5;
+  --bad: #C93A30;
+  --bad-soft: #FBE1DE;
+  --font-display: "Alfa Slab One", Rockwell, "Roboto Slab", Georgia, serif;
+  --font-body: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+  --sky-top: #BEDFFF;
+  --sky-bottom: #F1F7FF;
+  --cloud: rgba(255, 255, 255, .85);
+  --plat-shadow: #2468B0;
+  --ground: #7DBA57;
+  --ground-shadow: #5E9840;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1A1B2C; --surface: #25273D; --surface-2: #2E3150; --ink: #F7EFDC; --muted: #B7B2CB;
+    --line: #3B3E5E; --accent: #FF7A52; --on-accent: #1A1B2C; --blue: #5BA6F2; --blue-soft: #253A57;
+    --violet: #A28CF5; --good: #52C987; --good-soft: #1F3B2E; --bad: #F2766B; --bad-soft: #43252A;
+    --sky-top: #16213F; --sky-bottom: #2C3B66; --cloud: rgba(255, 255, 255, .12); --plat-shadow: #2A5A93; --ground: #3E7A3A; --ground-shadow: #2C5A2A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A1B2C; --surface: #25273D; --surface-2: #2E3150; --ink: #F7EFDC; --muted: #B7B2CB;
+  --line: #3B3E5E; --accent: #FF7A52; --on-accent: #1A1B2C; --blue: #5BA6F2; --blue-soft: #253A57;
+  --violet: #A28CF5; --good: #52C987; --good-soft: #1F3B2E; --bad: #F2766B; --bad-soft: #43252A;
+  --sky-top: #16213F; --sky-bottom: #2C3B66; --cloud: rgba(255, 255, 255, .12); --plat-shadow: #2A5A93; --ground: #3E7A3A; --ground-shadow: #2C5A2A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 40px;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+.wrap { max-width: 880px; margin: 0 auto; }
+
+/* Scoreboard bar */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); border-bottom: 2px solid var(--line);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  padding-block: 12px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand b { font-family: var(--font-display); font-weight: 400; color: var(--accent); font-size: 1.35rem; line-height: 1; }
+.brand span { color: var(--muted); font-weight: 700; font-size: .9rem; }
+.player { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.player label { font-weight: 800; font-size: .85rem; color: var(--muted); }
+.player input {
+  width: 10.5rem; max-width: 46vw; padding: 7px 10px; border-radius: 10px;
+  border: 2px solid var(--line); background: var(--surface);
+}
+.total {
+  display: inline-flex; align-items: center; gap: 6px; position: relative;
+  background: var(--accent); color: var(--on-accent); border-radius: 999px;
+  padding: 6px 14px; font-weight: 900; font-variant-numeric: tabular-nums;
+}
+.plus {
+  position: absolute; right: 6px; top: -4px; font-weight: 900; color: var(--good);
+  animation: rise 900ms ease-out forwards; pointer-events: none;
+}
+@keyframes rise { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-26px); } }
+
+/* Home */
+.hero { padding-block: 28px 8px; }
+.hero h1 {
+  font-family: var(--font-display); font-weight: 400; color: var(--accent);
+  font-size: clamp(2.1rem, 7vw, 3.6rem); line-height: 1.05; margin: 0; text-wrap: balance;
+}
+.hero p { margin: 8px 0 0; color: var(--muted); font-weight: 700; max-width: 60ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 22px; }
+.card {
+  display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: center; text-align: left;
+  background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 14px; transition: transform .12s ease, border-color .12s ease;
+}
+.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.card .vis {
+  width: 76px; height: 76px; border-radius: 12px; background: var(--blue-soft);
+  display: grid; place-items: center; font-family: var(--font-display); color: var(--blue);
+  font-size: 1.15rem; line-height: 1; text-align: center;
+}
+.card .vis svg { width: 64px; height: 64px; }
+.card h2 { margin: 0; font-size: 1.15rem; font-weight: 900; }
+.card p { margin: 2px 0 6px; color: var(--muted); font-size: .92rem; line-height: 1.35; }
+.chip {
+  display: inline-block; font-size: .78rem; font-weight: 800; letter-spacing: .02em;
+  color: var(--violet); border: 2px solid var(--violet); border-radius: 999px; padding: 1px 9px;
+}
+.foot { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; color: var(--muted); font-size: .88rem; }
+.link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px 0; }
+.link-btn.warn { color: var(--bad); font-weight: 800; }
+
+/* Game screen */
+.gamehead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding-block: 18px 6px; }
+.back { background: var(--surface); border: 2px solid var(--line); border-radius: 10px; padding: 6px 12px; font-weight: 800; }
+.gamehead h1 { font-family: var(--font-display); font-weight: 400; color: var(--accent); margin: 0; font-size: 1.6rem; line-height: 1.1; }
+.gamehead .meta { margin-left: auto; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.progress { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin: 6px 0 18px; }
+.progress i { display: block; height: 100%; background: var(--blue); border-radius: 999px; transition: width .3s ease; }
+.stage {
+  background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: clamp(16px, 4vw, 28px); display: grid; gap: 18px;
+}
+.ask { font-size: clamp(1.3rem, 4.5vw, 1.75rem); font-weight: 900; margin: 0; text-align: center; text-wrap: balance; }
+.sub { text-align: center; color: var(--muted); font-weight: 700; margin: -10px 0 0; }
+.big-word {
+  text-align: center; font-family: var(--font-display); color: var(--blue);
+  font-size: clamp(2.2rem, 9vw, 3.6rem); line-height: 1.1; overflow-wrap: anywhere;
+}
+.tag { justify-self: center; font-size: .8rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.clock { width: min(250px, 70vw); height: auto; justify-self: center; display: block; }
+.digital {
+  justify-self: center; font-family: var(--font-display); font-size: clamp(2.6rem, 11vw, 4rem); line-height: 1;
+  color: var(--ink); background: var(--surface-2); border-radius: 12px; padding: 10px 22px; font-variant-numeric: tabular-nums;
+}
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.opt {
+  min-height: 58px; padding: 10px 14px; border-radius: 12px; border: 2px solid var(--line);
+  background: var(--bg); font-weight: 800; font-size: 1.08rem; text-align: left;
+  display: flex; align-items: center; gap: 10px;
+}
+.opt .k { flex: none; width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: .8rem; background: var(--surface-2); color: var(--muted); }
+.opt:hover:not(:disabled) { border-color: var(--blue); }
+.opt:disabled { cursor: default; }
+.opt.good { background: var(--good-soft); border-color: var(--good); color: var(--ink); }
+.opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--ink); }
+.opt.dim { opacity: .55; }
+.feedback { border-radius: 12px; padding: 12px 16px; font-weight: 700; display: grid; gap: 4px; }
+.feedback.good { background: var(--good-soft); color: var(--ink); border: 2px solid var(--good); }
+.feedback.bad { background: var(--bad-soft); color: var(--ink); border: 2px solid var(--bad); }
+.feedback strong.t { font-size: 1.15rem; }
+.feedback.good strong.t { color: var(--good); }
+.feedback.bad strong.t { color: var(--bad); }
+.feedback .tip { font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.btn {
+  border: 0; border-radius: 12px; padding: 12px 22px; font-weight: 900; font-size: 1.05rem;
+  background: var(--accent); color: var(--on-accent);
+}
+.btn.alt { background: var(--surface-2); color: var(--ink); }
+.btn.blue { background: var(--blue); color: #fff; }
+.btn:disabled { opacity: .5; cursor: default; }
+.answer-in {
+  width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--line);
+  background: var(--bg); font-size: 1.2rem; font-weight: 700;
+}
+.answer-in:focus { border-color: var(--blue); outline: none; }
+.target {
+  text-align: center; font-family: var(--font-display); font-size: clamp(1.6rem, 6vw, 2.3rem);
+  color: var(--accent); line-height: 1.15; text-wrap: balance;
+}
+.setter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 420px; justify-self: center; width: 100%; }
+.setter .grp { display: grid; gap: 6px; text-align: center; }
+.setter .grp > span { font-weight: 900; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.setter .grp:first-child > span { color: var(--accent); }
+.setter .grp:last-child > span { color: var(--blue); }
+.setter .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.setter button { padding: 10px 0; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); font-weight: 900; font-size: 1.05rem; }
+
+/* Race */
+.timer { text-align: center; font-family: var(--font-display); font-size: 2.2rem; color: var(--blue); font-variant-numeric: tabular-nums; line-height: 1; }
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.tile {
+  min-width: 120px; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--line);
+  background: var(--bg); font-weight: 900; font-size: 1.1rem; position: relative;
+}
+.tile.done { background: var(--good-soft); border-color: var(--good); }
+.tile .n { position: absolute; top: -9px; left: -9px; width: 24px; height: 24px; border-radius: 50%; background: var(--good); color: #fff; font-size: .78rem; display: grid; place-items: center; }
+.tile.shake { animation: shake .35s; border-color: var(--bad); }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* Results */
+.result { text-align: center; display: grid; gap: 10px; justify-items: center; }
+.stars { font-size: 2.6rem; letter-spacing: .1em; color: var(--accent); line-height: 1; }
+.stars .off { color: var(--line); }
+.points { font-family: var(--font-display); font-size: clamp(3rem, 14vw, 5rem); color: var(--accent); line-height: 1; }
+.result p { margin: 0; font-weight: 700; color: var(--muted); }
+
+/* El salto */
+.card.feature { grid-column: 1 / -1; border-color: var(--accent); }
+.card.feature .vis { background: var(--sky-top); }
+.card.feature .vis svg { width: 52px; height: 58px; }
+.chip.new { color: var(--accent); border-color: var(--accent); margin-right: 6px; }
+.jq {
+  background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; display: grid; gap: 6px; justify-items: center; text-align: center; min-height: 120px; align-content: center;
+}
+.jq .clock { width: min(132px, 38vw); }
+.jq .big-word { font-size: clamp(1.9rem, 8vw, 2.8rem); }
+.jq .ask { font-size: clamp(1.1rem, 4.2vw, 1.45rem); }
+.tline { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.tbar { flex: 1; height: 14px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.tbar i { display: block; height: 100%; width: 100%; background: var(--good); border-radius: 999px; transform-origin: left center; }
+.tbar i.run { animation: drain 5s linear forwards; }
+@keyframes drain { 0% { transform: scaleX(1); background: var(--good); } 60% { background: var(--accent); } 100% { transform: scaleX(0); background: var(--bad); } }
+.tsec { width: 2.2ch; text-align: right; font-family: var(--font-display); font-size: 1.6rem; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.scene {
+  position: relative; height: clamp(250px, 40vh, 330px); border-radius: var(--radius); overflow: hidden;
+  background: linear-gradient(var(--sky-top), var(--sky-bottom)); border: 2px solid var(--line);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.cloud { position: absolute; background: var(--cloud); border-radius: 999px; height: 22px; }
+.cloud::before, .cloud::after { content: ""; position: absolute; background: var(--cloud); border-radius: 50%; }
+.cloud::before { width: 30px; height: 30px; left: 12px; top: -14px; }
+.cloud::after { width: 22px; height: 22px; left: 36px; top: -9px; }
+.cloud.c1 { width: 80px; left: 8%; top: 18%; }
+.cloud.c2 { width: 64px; right: 10%; top: 9%; }
+.world { position: absolute; inset: 0; }
+.world.descend { transition: transform .45s ease-in-out; }
+.plat {
+  position: absolute; bottom: 44%; width: 43%; min-height: 64px; padding: 12px 8px 12px;
+  border: 0; border-radius: 14px; background: var(--blue); color: #FFFFFF;
+  font-weight: 900; font-size: clamp(.92rem, 3.4vw, 1.12rem); line-height: 1.2;
+  box-shadow: 0 7px 0 var(--plat-shadow); transition: transform .5s ease-in, opacity .5s ease-in, background .15s;
+  display: grid; place-items: center; text-align: center; z-index: 2;
+}
+.plat.left { left: 4%; }
+.plat.right { right: 4%; }
+.plat:hover:not(:disabled) { transform: translateY(-3px); }
+.plat:disabled { cursor: default; }
+.plat .key {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); color: var(--ink); border-radius: 7px; padding: 0 7px; font-size: .78rem; line-height: 1.5;
+}
+.plat.good { background: var(--good); box-shadow: 0 7px 0 var(--good); }
+.plat.bad { background: var(--bad); box-shadow: 0 7px 0 var(--bad); }
+.plat.fall { transform: translateY(330px) rotate(16deg); opacity: 0; }
+.plat.fade { opacity: 0; }
+.ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: var(--ground); box-shadow: inset 0 6px 0 var(--ground-shadow); transition: transform .5s ease-in; }
+.ground.fall { transform: translateY(40px); }
+.hero-char {
+  position: absolute; width: 56px; height: 62px; bottom: 26px; z-index: 3;
+  transition: left .5s cubic-bezier(.3, .7, .4, 1), bottom .5s cubic-bezier(.2, 1.6, .5, 1);
+}
+.hero-char svg { width: 56px; height: 62px; display: block; }
+.hero-char.falling { transition: bottom .75s cubic-bezier(.5, 0, 1, .5); bottom: -100px !important; }
+.lvl-badge {
+  position: absolute; left: 10px; top: 10px; z-index: 4; background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 2px 12px; font-weight: 900; font-size: .9rem;
+}
+.pop { position: absolute; z-index: 5; font-family: var(--font-display); font-size: 1.6rem; color: var(--good); animation: rise 900ms ease-out forwards; pointer-events: none; }
+.ch-body { fill: var(--accent); }
+.ch-face { fill: #FFF8EC; }
+.ch-dark { fill: #26243A; }
+.ch-line { stroke: #26243A; stroke-width: 2.5; stroke-linecap: round; fill: none; }
+body.jumping .bar { position: static; }
+.over-q { background: var(--surface-2); border-radius: 12px; padding: 10px 14px; font-weight: 700; max-width: 520px; }
+
+/* Final summary */
+.finish-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 16px; }
+.finish-note { color: var(--bad); font-weight: 800; margin: 0; }
+.who { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; justify-self: center; text-align: left; font-size: 1.1rem; }
+.who .lbl { color: var(--muted); font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; align-self: center; }
+.tblwrap { overflow-x: auto; width: 100%; }
+.sum { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; text-align: left; }
+.sum th, .sum td { padding: 9px 10px; border-bottom: 2px solid var(--line); }
+.sum th { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sum td.n, .sum th.n { text-align: right; }
+.sum tfoot td { font-weight: 900; border-bottom: 0; }
+
+/* Clock drawing */
+.c-ring { fill: var(--blue); }
+.c-face { fill: var(--surface); }
+.c-num { fill: #FFFFFF; font-family: var(--font-display); font-size: 15px; }
+.c-tick { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
+.c-tick.minor { stroke: var(--muted); stroke-width: 1; }
+.c-hour { stroke: var(--accent); stroke-width: 7; stroke-linecap: round; }
+.c-min { stroke: var(--ink); stroke-width: 4.5; stroke-linecap: round; }
+.c-dot { fill: var(--ink); }
+.hand-anim .c-hour, .hand-anim .c-min { transition: transform .25s ease; transform-origin: 100px 100px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 520px) {
+  .gamehead .meta { margin-left: 0; width: 100%; }
+  .tile { min-width: calc(50% - 6px); }
+  .brand span { display: none; }
+  .player label { display: none; }
+  .scene { height: clamp(230px, 36vh, 330px); }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="brand"><b>Juegos del Tiempo</b><span>la hora · los días · los meses</span></div>
+    <div class="player">
+      <label for="player-name">Your name</label>
+      <input id="player-name" type="text" autocomplete="off" maxlength="24" placeholder="Type your name">
+      <span class="total" id="total" aria-live="polite">★ <span id="total-n">0</span> points</span>
+    </div>
+  </div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* ---------- Data ---------- */
+const NUM = ['', 'una', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce'];
+const PART_Y = { 0: 'en punto', 5: 'y cinco', 10: 'y diez', 15: 'y cuarto', 20: 'y veinte', 25: 'y veinticinco', 30: 'y media' };
+const PART_M = { 35: 'menos veinticinco', 40: 'menos veinte', 45: 'menos cuarto', 50: 'menos diez', 55: 'menos cinco' };
+const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const DAYS_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS_NO = ['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS_NO = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+const EVENTS = [['Navidad', 11], ['Halloween', 9], ['San Valentín', 1], ['Año Nuevo', 0], ['el Día Nacional de Noruega', 4]];
+const A_PROMPTS = ['¿A qué hora sale el tren?', '¿A qué hora es la película?', '¿A qué hora quedamos?', '¿A qué hora empieza la clase?'];
+const PRAISE = ['¡Muy bien!', '¡Genial!', '¡Perfecto!', '¡Correcto!', '¡Fenomenal!'];
+
+/* ---------- Helpers ---------- */
+const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nextH = h => h % 12 + 1;
+const prevH = h => (h === 1 ? 12 : h - 1);
+const laHora = hw => (hw === 1 ? 'la una' : 'las ' + NUM[hw]);
+
+/* The Spanish phrase for h:m (h 1–12, m multiple of 5). mode 'son' = "Son las…", mode 'a' = "A las…" */
+function timePhrase(h, m, mode = 'son') {
+  const hw = m <= 30 ? h : nextH(h);
+  const part = m <= 30 ? PART_Y[m] : PART_M[m];
+  const base = mode === 'a' ? 'a ' + laHora(hw) : (hw === 1 ? 'es la una' : 'son las ' + NUM[hw]);
+  return cap(base + ' ' + part);
+}
+const digital = (h, m) => h + ':' + String(m).padStart(2, '0');
+
+/* Wrong-but-tempting times: the classic mistakes first, then random ones */
+function timeDistractors(h, m) {
+  const out = [], seen = new Set([h + ':' + m]);
+  const add = (a, b) => { const k = a + ':' + b; if (!seen.has(k)) { seen.add(k); out.push([a, b]); } };
+  if (m > 30) { add(prevH(h), m); add(nextH(h), 60 - m); }
+  else if (m > 0 && m < 30) add(prevH(h), 60 - m);
+  add(nextH(h), m);
+  add(h, (m + 15) % 60);
+  while (out.length < 10) add(rint(1, 12), rint(0, 11) * 5);
+  return out;
+}
+function mcOptions(list, ans, near) {
+  const s = [ans];
+  for (const n of shuffle(near)) if (s.length < 4 && !s.includes(n)) s.push(n);
+  while (s.length < 4) { const r = rint(0, list.length - 1); if (!s.includes(r)) s.push(r); }
+  return shuffle(s).map(k => list[k]);
+}
+function normalize(s) {
+  return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[¿?¡!.,;:"'«»]/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/ de la (manana|tarde|noche|madrugada)$/, '');
+}
+
+/* ---------- Clock drawing ---------- */
+function clockSVG(h, m, extraClass = '') {
+  let s = `<svg class="clock ${extraClass}" viewBox="0 0 200 200" role="img" aria-label="Reloj">`;
+  s += '<circle class="c-ring" cx="100" cy="100" r="96"/><circle class="c-face" cx="100" cy="100" r="76"/>';
+  for (let i = 0; i < 60; i++) {
+    const a = i * 6 * Math.PI / 180, major = i % 5 === 0;
+    const r1 = major ? 64 : 70, r2 = 74;
+    s += `<line class="c-tick${major ? '' : ' minor'}" x1="${(100 + r1 * Math.sin(a)).toFixed(1)}" y1="${(100 - r1 * Math.cos(a)).toFixed(1)}" x2="${(100 + r2 * Math.sin(a)).toFixed(1)}" y2="${(100 - r2 * Math.cos(a)).toFixed(1)}"/>`;
+  }
+  for (let n = 1; n <= 12; n++) {
+    const a = n * 30 * Math.PI / 180;
+    s += `<text class="c-num" x="${(100 + 86 * Math.sin(a)).toFixed(1)}" y="${(100 - 86 * Math.cos(a)).toFixed(1)}" text-anchor="middle" dominant-baseline="central">${n}</text>`;
+  }
+  s += `<line class="c-hour" x1="100" y1="100" x2="100" y2="58" transform="rotate(${(h % 12) * 30 + m * 0.5} 100 100)"/>`;
+  s += `<line class="c-min" x1="100" y1="100" x2="100" y2="34" transform="rotate(${m * 6} 100 100)"/>`;
+  s += '<circle class="c-dot" cx="100" cy="100" r="6"/></svg>';
+  return s;
+}
+
+/* ---------- Profile & storage ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('jdt_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('jdt_' + k, JSON.stringify(v)); } catch (e) { } }
+};
+let profile = { name: '', total: 0, best: {}, games: {} };
+function saveProfile() { store.set('profile', profile); }
+function gameRec(id) { return profile.games[id] || (profile.games[id] = { plays: 0, points: 0 }); }
+function addPoints(p) {
+  profile.total += p;
+  if (state && state.id) gameRec(state.id).points += p;
+  saveProfile();
+  document.getElementById('total-n').textContent = profile.total;
+  const t = document.getElementById('total');
+  t.querySelectorAll('.plus').forEach(x => x.remove());
+  const plus = document.createElement('span'); plus.className = 'plus'; plus.textContent = '+' + p;
+  t.appendChild(plus); setTimeout(() => plus.remove(), 950);
+}
+
+/* ---------- Games ---------- */
+const GAMES = {
+  salto: { title: 'El salto', what: 'Jump onto the platform with the correct answer. 5 seconds per level, one mistake and you fall! Times, days and months mixed.', jump: true, feature: true, vis: () => charSVG() },
+  hora: { title: '¿Qué hora es?', what: 'Look at the clock and choose the correct time.', n: 10, vis: () => clockSVG(3, 15), make: makeClockQ },
+  reloj: { title: 'Pon el reloj', what: 'Read the time and move the clock hands to match.', n: 8, vis: () => clockSVG(8, 45), make: makeSetQ },
+  escribe: { title: 'Escribe la hora', what: 'Type the time in Spanish. Challenge level!', n: 8, vis: () => 'Son<br>las…', make: makeTypeQ },
+  dias: { title: 'Los días', what: 'Translate the days and work out before, after, yesterday and tomorrow.', n: 10, vis: () => 'lunes', make: makeDayQ },
+  meses: { title: 'Los meses', what: 'Translate the months, put them in order and find the month of each festival.', n: 10, vis: () => 'enero', make: makeMonthQ },
+  carrera: { title: 'La carrera', what: 'Put the days and months in order as fast as you can.', race: true, vis: () => '1·2·3' }
+};
+
+function makeClockQ() {
+  const h = rint(1, 12), m = rint(0, 11) * 5;
+  const mode = Math.random() < 0.3 ? 'a' : 'son';
+  const answer = timePhrase(h, m, mode);
+  const opts = [answer];
+  if (mode === 'a') opts.push(timePhrase(h, m, 'son'));
+  for (const [a, b] of timeDistractors(h, m)) {
+    if (opts.length >= 4) break;
+    const p = timePhrase(a, b, mode);
+    if (!opts.includes(p)) opts.push(p);
+  }
+  return {
+    kind: 'mc', points: 10, h, m,
+    ask: mode === 'a' ? pick(A_PROMPTS) : pick(['¿Qué hora es?', '¿Tienes hora?']),
+    visual: clockSVG(h, m), options: shuffle(opts), answer,
+    tip(sel) {
+      if (mode === 'a' && sel === timePhrase(h, m, 'son')) return 'To say <b>when</b> something happens, use <b>a la / a las</b>.';
+      if (m > 30) return `With <b>menos</b> we use the <b>next</b> hour: it is ${60 - m} minutes to ${laHora(nextH(h))}.`;
+      if (h === 1 && m <= 30) return 'Remember: <b>es la una</b> (singular), but <b>son las dos, son las tres…</b>';
+      return 'The clock shows ' + digital(h, m) + '.';
+    }
+  };
+}
+function makeSetQ() {
+  const h = rint(1, 12), m = rint(0, 11) * 5;
+  return { kind: 'set', points: 15, h, m, phrase: timePhrase(h, m, 'son') };
+}
+function makeTypeQ() {
+  const h = rint(1, 12), m = rint(0, 11) * 5;
+  return { kind: 'type', points: 20, h, m, answer: timePhrase(h, m, 'son') };
+}
+function makeDayQ() {
+  const i = rint(0, 6), t = pick(['en', 'no', 'after', 'before', 'manana', 'ayer']);
+  let q = { kind: 'mc', points: 10 }, ans, near = [];
+  if (t === 'en' || t === 'no') {
+    q.tag = t === 'en' ? 'English' : 'Norsk'; q.word = t === 'en' ? DAYS_EN[i] : DAYS_NO[i];
+    q.ask = '¿Cómo se dice en español?'; ans = i; near = [(i + 1) % 7, (i + 6) % 7];
+  } else if (t === 'after') { q.ask = `¿Qué día va después del ${DIAS[i]}?`; ans = (i + 1) % 7; near = [i, (i + 2) % 7, (i + 6) % 7]; }
+  else if (t === 'before') { q.ask = `¿Qué día va antes del ${DIAS[i]}?`; ans = (i + 6) % 7; near = [i, (i + 1) % 7, (i + 5) % 7]; }
+  else if (t === 'manana') { q.ask = `Si hoy es ${DIAS[i]}, mañana es…`; ans = (i + 1) % 7; near = [i, (i + 6) % 7]; }
+  else { q.ask = `Si hoy es ${DIAS[i]}, ayer fue…`; ans = (i + 6) % 7; near = [i, (i + 1) % 7]; }
+  q.answer = DIAS[ans]; q.options = mcOptions(DIAS, ans, near);
+  q.tip = () => 'Order: ' + DIAS.join(', ') + '.';
+  return q;
+}
+function makeMonthQ() {
+  const i = rint(0, 11), t = pick(['num', 'en', 'no', 'after', 'before', 'event']);
+  let q = { kind: 'mc', points: 10 }, ans, near = [];
+  if (t === 'num') { q.tag = 'Número'; q.word = String(i + 1); q.ask = `¿Cuál es el mes número ${i + 1}?`; ans = i; near = [(i + 1) % 12, (i + 11) % 12]; }
+  else if (t === 'en' || t === 'no') {
+    q.tag = t === 'en' ? 'English' : 'Norsk'; q.word = t === 'en' ? MONTHS_EN[i] : MONTHS_NO[i];
+    q.ask = '¿Cómo se dice en español?'; ans = i; near = [(i + 1) % 12, (i + 11) % 12];
+  } else if (t === 'after') { q.ask = `¿Qué mes va después de ${MESES[i]}?`; ans = (i + 1) % 12; near = [i, (i + 2) % 12, (i + 11) % 12]; }
+  else if (t === 'before') { q.ask = `¿Qué mes va antes de ${MESES[i]}?`; ans = (i + 11) % 12; near = [i, (i + 1) % 12, (i + 10) % 12]; }
+  else { const [ev, k] = pick(EVENTS); q.ask = `¿En qué mes es ${ev}?`; ans = k; near = [(k + 1) % 12, (k + 11) % 12]; }
+  q.answer = MESES[ans]; q.options = mcOptions(MESES, ans, near);
+  q.tip = () => `${cap(MESES[ans])} is month number ${ans + 1}.`;
+  return q;
+}
+
+/* ---------- El salto: character + questions ---------- */
+function charSVG() {
+  return `<svg viewBox="0 0 56 62" aria-hidden="true">
+    <circle class="ch-body" cx="11" cy="9" r="6"/><circle class="ch-body" cx="45" cy="9" r="6"/>
+    <rect class="ch-dark" x="17" y="47" width="5" height="10" rx="2.5"/><rect class="ch-dark" x="34" y="47" width="5" height="10" rx="2.5"/>
+    <ellipse class="ch-dark" cx="18" cy="58" rx="7" ry="3.5"/><ellipse class="ch-dark" cx="38" cy="58" rx="7" ry="3.5"/>
+    <circle class="ch-body" cx="28" cy="29" r="23"/><circle class="ch-face" cx="28" cy="29" r="16.5"/>
+    <circle class="ch-dark" cx="22" cy="26" r="3"/><circle class="ch-dark" cx="34" cy="26" r="3"/>
+    <path class="ch-line" d="M21.5 33.5 Q28 39 34.5 33.5"/></svg>`;
+}
+function makeJumpQ() {
+  const r = Math.random(); let q;
+  if (r < 0.45) {
+    q = makeClockQ();
+    if (Math.random() < 0.45) { q.visual = ''; q.word = digital(q.h, q.m); q.tag = 'Digital'; }
+  } else if (r < 0.725) q = makeDayQ();
+  else q = makeMonthQ();
+  const wrong = pick(q.options.filter(o => o !== q.answer));
+  q.two = shuffle([q.answer, wrong]);
+  return q;
+}
+
+/* ---------- Engine ---------- */
+const view = document.getElementById('view');
+let state = null, raceTimer = null;
+
+function showHome() {
+  clearInterval(raceTimer); stopJump(); endJumpView(); state = null;
+  let cards = '';
+  for (const [id, g] of Object.entries(GAMES)) {
+    const best = profile.best[id];
+    cards += `<button class="card${g.feature ? ' feature' : ''}" data-game="${id}" id="card-${id}">
+      <span class="vis">${g.vis()}</span>
+      <span><h2>${g.title}</h2><p>${g.what}</p>
+      ${g.feature ? '<span class="chip new">New</span>' : ''}<span class="chip">${best ? 'Best: ' + best + (g.jump ? ' levels' : ' points') : 'Play!'}</span></span></button>`;
+  }
+  view.innerHTML = `<section class="hero"><h1>¿Qué hora es? ¿Qué día es?</h1>
+    <p>Choose a game. Every correct answer earns points, and three correct answers in a row give you a +5 bonus. Try to beat your best score!</p>
+    <div class="finish-row"><button class="btn" id="finish">Finish practice</button><span class="sub" style="margin:0;text-align:left">Click this at the end of the lesson to see your final score.</span></div>
+    <p class="finish-note" id="finish-note" hidden>Type your name at the top first, then click Finish practice.</p></section>
+    <div class="grid">${cards}</div>
+    <div class="foot"><span>Your points are saved on this computer.</span>
+    <button class="link-btn" id="reset">Reset my points</button></div>`;
+  view.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => startGame(c.dataset.game)));
+  document.getElementById('finish').addEventListener('click', () => {
+    if (!profile.name || !profile.name.trim()) {
+      document.getElementById('finish-note').hidden = false;
+      document.getElementById('player-name').focus();
+      return;
+    }
+    showSummary();
+  });
+  const r = document.getElementById('reset'); let armed = false, to;
+  r.addEventListener('click', () => {
+    if (!armed) { armed = true; r.textContent = 'Are you sure? Click again to reset'; r.classList.add('warn'); to = setTimeout(() => { armed = false; r.textContent = 'Reset my points'; r.classList.remove('warn'); }, 3500); return; }
+    clearTimeout(to); profile.total = 0; profile.best = {}; profile.games = {}; saveProfile();
+    document.getElementById('total-n').textContent = 0; showHome();
+  });
+  window.scrollTo(0, 0);
+}
+
+function gameHead(title, meta, pct, noBar) {
+  return `<div class="gamehead"><button class="back" id="back">← Games</button><h1>${title}</h1><span class="meta" id="meta">${meta}</span></div>
+    ${noBar ? '<div style="height:10px"></div>' : `<div class="progress"><i id="prog" style="width:${pct}%"></i></div>`}`;
+}
+
+function startGame(id) {
+  stopJump();
+  if (GAMES[id].jump) return startJump();
+  if (GAMES[id].race) return startRace();
+  state = { id, i: 0, n: GAMES[id].n, score: 0, correct: 0, streak: 0, q: null, answered: false };
+  nextQuestion();
+}
+function nextQuestion() {
+  if (state.i >= state.n) return showResults();
+  const g = GAMES[state.id];
+  state.q = g.make(); state.answered = false;
+  const q = state.q;
+  let body = '';
+  if (q.kind === 'mc') {
+    body = `${q.tag ? `<span class="tag">${q.tag}</span>` : ''}
+      ${q.word ? `<div class="big-word">${esc(q.word)}</div>` : ''}
+      ${q.visual || ''}
+      <p class="ask">${esc(q.ask)}</p>
+      <div class="opts">${q.options.map((o, k) => `<button class="opt" data-v="${esc(o)}"><span class="k">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}</div>`;
+  } else if (q.kind === 'type') {
+    body = `<div class="digital">${digital(q.h, q.m)}</div>${clockSVG(q.h, q.m)}
+      <p class="ask">¿Qué hora es?</p><p class="sub">Type the answer in Spanish.</p>
+      <form id="type-form" class="row" style="display:grid;gap:10px">
+        <input class="answer-in" id="answer-in" type="text" autocomplete="off" spellcheck="false" placeholder="Son las…">
+        <div class="row"><button class="btn" type="submit" id="check">Check</button>
+        <button class="btn alt" type="button" id="hint">Hint</button></div>
+      </form><p class="sub" id="hint-text" hidden></p>`;
+  } else if (q.kind === 'set') {
+    q.ch = 12; q.cm = 0;
+    if (q.h === 12 && q.m === 0) q.ch = 6;
+    body = `<p class="ask">Set the clock to this time:</p><div class="target">${esc(q.phrase)}</div>
+      <div id="set-clock">${clockSVG(q.ch, q.cm)}</div>
+      <div class="setter">
+        <div class="grp"><span>Hour (short hand)</span><div class="pair"><button id="h-down" aria-label="Hora menos">−</button><button id="h-up" aria-label="Hora más">+</button></div></div>
+        <div class="grp"><span>Minutes (long hand)</span><div class="pair"><button id="m-down" aria-label="Cinco minutos menos">−5</button><button id="m-up" aria-label="Cinco minutos más">+5</button></div></div>
+      </div>
+      <div class="row"><button class="btn" id="check">Check</button></div>`;
+  }
+  view.innerHTML = gameHead(g.title, metaText(), state.i / state.n * 100) +
+    `<section class="stage" id="stage">${body}<div id="fb"></div></section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  if (q.kind === 'mc') {
+    view.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answerMC(b.dataset.v)));
+  } else if (q.kind === 'type') {
+    const inp = document.getElementById('answer-in'); inp.focus();
+    document.getElementById('type-form').addEventListener('submit', e => { e.preventDefault(); if (!state.answered && inp.value.trim()) answerType(inp.value); });
+    document.getElementById('hint').addEventListener('click', () => {
+      q.usedHint = true;
+      const ht = document.getElementById('hint-text'); ht.hidden = false;
+      const hw = q.m <= 30 ? q.h : nextH(q.h);
+      ht.innerHTML = `Start with <b>${hw === 1 ? 'Es la una…' : 'Son las ' + NUM[hw] + '…'}</b> (with a hint you get 10 points instead of 20)`;
+    });
+  } else if (q.kind === 'set') {
+    const redraw = () => { document.getElementById('set-clock').innerHTML = clockSVG(q.ch, q.cm); };
+    document.getElementById('h-up').onclick = () => { if (state.answered) return; q.ch = nextH(q.ch); redraw(); };
+    document.getElementById('h-down').onclick = () => { if (state.answered) return; q.ch = prevH(q.ch); redraw(); };
+    document.getElementById('m-up').onclick = () => { if (state.answered) return; q.cm = (q.cm + 5) % 60; redraw(); };
+    document.getElementById('m-down').onclick = () => { if (state.answered) return; q.cm = (q.cm + 55) % 60; redraw(); };
+    document.getElementById('check').onclick = () => answerSet();
+  }
+}
+function metaText() { return `Question ${Math.min(state.i + 1, state.n)} of ${state.n} · ${state.score} points`; }
+
+function answerMC(v) {
+  if (state.answered) return;
+  const q = state.q, ok = v === q.answer;
+  view.querySelectorAll('.opt').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.v === q.answer) b.classList.add('good');
+    else if (b.dataset.v === v) b.classList.add('bad');
+    else b.classList.add('dim');
+  });
+  finish(ok, q.points, ok ? '' : `The correct answer is: <b>${esc(q.answer)}</b>`, ok ? '' : q.tip(v));
+}
+function answerType(raw) {
+  const q = state.q, a = normalize(raw), target = normalize(q.answer);
+  const accepted = [target];
+  if (q.m === 0) accepted.push(target.replace(/ en punto$/, ''));
+  const ok = accepted.includes(a);
+  document.getElementById('answer-in').disabled = true;
+  document.getElementById('check').disabled = true;
+  document.getElementById('hint').disabled = true;
+  let tip = '';
+  if (!ok) {
+    if (/\bson las una\b/.test(a)) tip = 'For one o\'clock we say <b>es la una</b>, not "son las una".';
+    else if (q.m > 30 && a.includes('menos') && a.includes(' ' + normalize(NUM[q.h]) + ' ')) tip = `With <b>menos</b> we use the <b>next</b> hour: ${laHora(nextH(q.h))}.`;
+    else if (!/^(son las|es la)/.test(a)) tip = 'Start with <b>Son las…</b> or <b>Es la una…</b>';
+  }
+  finish(ok, q.usedHint ? 10 : q.points, ok ? '' : `The correct answer is: <b>${esc(q.answer)}</b>`, tip);
+}
+function answerSet() {
+  if (state.answered) return;
+  const q = state.q, ok = q.ch === q.h && q.cm === q.m;
+  ['h-up', 'h-down', 'm-up', 'm-down', 'check'].forEach(id => { document.getElementById(id).disabled = true; });
+  let tip = '';
+  if (!ok) {
+    document.getElementById('set-clock').innerHTML = clockSVG(q.h, q.m);
+    if (q.m > 30 && q.ch === nextH(q.h) && q.cm === q.m) tip = `Close! With <b>menos</b>, the short hand is just <b>before</b> ${q.h === 12 ? 'la una' : 'las ' + NUM[nextH(q.h)]}: it is ${60 - q.m} minutes to the hour.`;
+    else tip = 'This is how the clock should look: ' + digital(q.h, q.m) + '.';
+  }
+  finish(ok, q.points, ok ? '' : 'The clock now shows the correct time.', tip);
+}
+
+function finish(ok, base, detail, tip) {
+  state.answered = true; state.i++;
+  let pts = 0, bonus = '';
+  if (ok) {
+    state.streak++; state.correct++;
+    pts = base + (state.streak >= 3 ? 5 : 0);
+    if (state.streak >= 3) bonus = ` <span>${state.streak} in a row · +5 bonus</span>`;
+    state.score += pts; addPoints(pts);
+  } else state.streak = 0;
+  const fb = document.getElementById('fb');
+  fb.innerHTML = `<div class="feedback ${ok ? 'good' : 'bad'}">
+    <strong class="t">${ok ? pick(PRAISE) + ' +' + pts : '¡Casi!'}</strong>${bonus}
+    ${detail ? `<span>${detail}</span>` : ''}${tip ? `<span class="tip">${tip}</span>` : ''}</div>
+    <div class="row" style="margin-top:12px"><button class="btn blue" id="next">${state.i >= state.n ? 'See results' : 'Next →'}</button></div>`;
+  document.getElementById('meta').textContent = `Question ${state.i} of ${state.n} · ${state.score} points`;
+  document.getElementById('prog').style.width = (state.i / state.n * 100) + '%';
+  const nx = document.getElementById('next');
+  nx.addEventListener('click', nextQuestion);
+  nx.focus({ preventScroll: true });
+  fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function stars(frac) { const n = frac >= 0.9 ? 3 : frac >= 0.6 ? 2 : frac >= 0.3 ? 1 : 0; return '<span>★</span>'.repeat(n) + '<span class="off">★</span>'.repeat(3 - n); }
+function saveBest(id, score) { const isNew = score > (profile.best[id] || 0); if (isNew) { profile.best[id] = score; saveProfile(); } return isNew; }
+
+function showResults() {
+  gameRec(state.id).plays++; saveProfile();
+  const g = GAMES[state.id], isNew = saveBest(state.id, state.score);
+  const msg = state.correct === state.n ? '¡Todo perfecto!' : state.correct >= state.n * 0.6 ? '¡Buen trabajo!' : '¡Sigue practicando!';
+  view.innerHTML = gameHead(g.title, `${state.n} of ${state.n} · ${state.score} points`, 100) +
+    `<section class="stage result" id="result"><div class="stars">${stars(state.correct / state.n)}</div>
+      <div class="points">${state.score}</div><p>points · ${state.correct} of ${state.n} correct</p>
+      <p style="color:var(--ink);font-size:1.2rem;font-weight:900">${msg}${isNew ? ' ¡Nuevo récord!' : ''}</p>
+      <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="home">Choose another game</button></div></section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  document.getElementById('again').addEventListener('click', () => startGame(state.id));
+  document.getElementById('home').addEventListener('click', showHome);
+}
+
+/* ---------- Final summary ---------- */
+function showSummary() {
+  clearInterval(raceTimer); stopJump(); endJumpView(); state = null;
+  const date = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  let rows = '', done = 0;
+  for (const [id, g] of Object.entries(GAMES)) {
+    const r = profile.games[id] || { plays: 0, points: 0 };
+    if (r.plays > 0) done++;
+    const b = profile.best[id] || 0;
+    rows += `<tr><td>${g.title}</td><td class="n">${r.plays}</td><td class="n">${r.points}</td><td class="n">${g.jump ? b + ' levels' : b}</td></tr>`;
+  }
+  view.innerHTML = `<section class="hero"><h1>¡Práctica terminada!</h1><p>Show this screen to your teacher.</p></section>
+    <section class="stage result" id="summary">
+      <div class="who"><span class="lbl">Name</span><b id="sum-name">${esc(profile.name.trim())}</b><span class="lbl">Date</span><b>${date}</b></div>
+      <div class="points" id="sum-total">${profile.total}</div><p>points in total · ${done} of ${Object.keys(GAMES).length} games completed</p>
+      <div class="tblwrap"><table class="sum"><thead><tr><th>Game</th><th class="n">Times completed</th><th class="n">Points</th><th class="n">Best score</th></tr></thead>
+      <tbody>${rows}</tbody><tfoot><tr><td>Total</td><td></td><td class="n">${profile.total}</td><td></td></tr></tfoot></table></div>
+      <div class="row"><button class="btn alt" id="home">Back to the games</button></div>
+    </section>`;
+  document.getElementById('home').addEventListener('click', showHome);
+  window.scrollTo(0, 0);
+}
+
+/* ---------- El salto: game ---------- */
+let jump = null;
+function endJumpView() { document.body.classList.remove('jumping'); }
+function stopJump() { if (jump) { jump.timers.forEach(clearTimeout); jump.timers = []; clearInterval(jump.tick); jump.locked = true; } }
+function later(fn, ms) { const t = setTimeout(fn, ms); jump.timers.push(t); return t; }
+
+function startJump() {
+  stopJump();
+  state = { id: 'salto' };
+  jump = { level: 0, points: 0, charX: 50, timers: [], tick: null, locked: true, q: null };
+  const best = profile.best.salto || 0;
+  view.innerHTML = gameHead('El salto', best ? `Your best: ${best} levels` : 'New game', 0, true) +
+    `<section class="stage result" id="jump-intro">
+      <div style="width:84px">${charSVG()}</div>
+      <p class="ask">How far can you climb?</p>
+      <p style="color:var(--ink);max-width:46ch">Jump onto the platform with the <b>correct answer</b>. You have <b>5 seconds</b> for each level.
+      One wrong jump, or too slow, and you fall!</p>
+      <p>Click a platform, or use the <b>← →</b> arrow keys.</p>
+      <div class="row"><button class="btn" id="jump-start">Start</button></div>
+    </section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  const st = document.getElementById('jump-start'); st.addEventListener('click', jumpLevel); st.focus({ preventScroll: true });
+}
+
+function jumpLevel() {
+  stopJump();
+  jump.level++; jump.locked = false;
+  const q = makeJumpQ(); jump.q = q;
+  view.innerHTML = gameHead('El salto', `Level ${jump.level} · ${jump.points} points`, 0, true) +
+    `<section class="jq" id="jq">${q.tag ? `<span class="tag">${q.tag}</span>` : ''}
+      ${q.word ? `<div class="big-word">${esc(q.word)}</div>` : ''}${q.visual || ''}
+      <p class="ask">${esc(q.ask)}</p></section>
+    <div class="tline"><div class="tbar"><i id="tbar"></i></div><span class="tsec" id="tsec">5</span></div>
+    <div class="scene" id="scene">
+      <div class="cloud c1"></div><div class="cloud c2"></div>
+      <div class="world" id="world">
+        <button class="plat left" id="plat-0"><span class="key">←</span><span class="ans">${esc(q.two[0])}</span></button>
+        <button class="plat right" id="plat-1"><span class="key">→</span><span class="ans">${esc(q.two[1])}</span></button>
+        <div class="ground" id="ground"></div>
+        <div class="hero-char" id="char" style="left:calc(${jump.charX}% - 28px)">${charSVG()}</div>
+      </div>
+      <div class="lvl-badge">Nivel ${jump.level}</div>
+    </div>`;
+  document.body.classList.add('jumping');
+  if (innerHeight < 900) { const top = document.getElementById('jq').getBoundingClientRect().top + scrollY - 8; window.scrollTo(0, Math.max(0, top)); }
+  document.getElementById('back').addEventListener('click', showHome);
+  document.getElementById('plat-0').addEventListener('click', () => chooseJump(0));
+  document.getElementById('plat-1').addEventListener('click', () => chooseJump(1));
+  const bar = document.getElementById('tbar');
+  void bar.offsetWidth; bar.classList.add('run');
+  jump.t0 = performance.now();
+  jump.tick = setInterval(() => {
+    const el = document.getElementById('tsec');
+    if (el) el.textContent = Math.max(0, Math.ceil(5 - (performance.now() - jump.t0) / 1000));
+  }, 100);
+  later(timeUp, 5000);
+}
+
+function chooseJump(i) {
+  if (!jump || jump.locked) return;
+  jump.locked = true;
+  stopJump(); jump.locked = true;
+  const bar = document.getElementById('tbar'); if (bar) bar.style.animationPlayState = 'paused';
+  const plat = document.getElementById('plat-' + i), other = document.getElementById('plat-' + (1 - i));
+  const scene = document.getElementById('scene'), ch = document.getElementById('char');
+  plat.disabled = true; other.disabled = true;
+  const sr = scene.getBoundingClientRect(), pr = plat.getBoundingClientRect();
+  const cx = (pr.left + pr.width / 2 - sr.left) / sr.width * 100;
+  const landing = sr.bottom - pr.top - 2;
+  ch.style.left = `calc(${cx}% - 28px)`;
+  ch.style.bottom = landing + 'px';
+  const ok = jump.q.two[i] === jump.q.answer;
+  jump.picked = jump.q.two[i];
+  later(() => {
+    if (ok) {
+      plat.classList.add('good');
+      jump.points += 10; addPoints(10);
+      document.getElementById('meta').textContent = `Level ${jump.level} · ${jump.points} points`;
+      const pop = document.createElement('span'); pop.className = 'pop'; pop.textContent = '+10';
+      pop.style.left = `calc(${cx}% - 20px)`; pop.style.bottom = (landing + 64) + 'px';
+      document.getElementById('world').appendChild(pop);
+      jump.charX = cx;
+      later(() => {
+        other.classList.add('fade');
+        const w = document.getElementById('world');
+        w.classList.add('descend'); w.style.transform = `translateY(${landing - 26}px)`;
+      }, 300);
+      later(jumpLevel, 800);
+    } else {
+      plat.classList.add('bad');
+      later(() => { plat.classList.add('fall'); ch.classList.add('falling'); }, 250);
+      later(() => jumpOver('wrong'), 1200);
+    }
+  }, 520);
+}
+
+function timeUp() {
+  if (!jump || jump.locked) return;
+  jump.locked = true; clearInterval(jump.tick);
+  document.getElementById('tsec').textContent = '0';
+  ['plat-0', 'plat-1'].forEach(id => { const p = document.getElementById(id); p.disabled = true; p.classList.add('fall'); });
+  document.getElementById('ground').classList.add('fall');
+  document.getElementById('char').classList.add('falling');
+  later(() => jumpOver('time'), 1100);
+}
+
+function jumpOver(reason) {
+  stopJump(); endJumpView();
+  const climbed = jump.level - 1, q = jump.q;
+  gameRec('salto').plays++;
+  const isNew = climbed > (profile.best.salto || 0);
+  if (isNew) profile.best.salto = climbed;
+  saveProfile();
+  const date = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const why = reason === 'time'
+    ? `<b>¡Se acabó el tiempo!</b> Time ran out on level ${jump.level}.`
+    : `<b>¡Oh no!</b> You chose <b>${esc(jump.picked)}</b> on level ${jump.level}.`;
+  const qText = (q.word ? esc(q.word) + ' · ' : '') + esc(q.ask);
+  view.innerHTML = gameHead('El salto', `${climbed} levels · ${jump.points} points`, 0, true) +
+    `<section class="stage result" id="result">
+      <span class="tag">Game over</span>
+      <div class="points" id="jump-levels">${climbed}</div>
+      <p style="color:var(--ink);font-size:1.15rem;font-weight:900">${climbed === 1 ? 'level' : 'levels'} climbed · ${jump.points} points${isNew && climbed > 0 ? ' · ¡Nuevo récord!' : ''}</p>
+      <div class="over-q">${why}<br>Question: ${qText}<br>Correct answer: <b>${esc(q.answer)}</b></div>
+      <div class="who"><span class="lbl">Name</span><b>${esc((profile.name || '').trim() || '—')}</b><span class="lbl">Date</span><b>${date}</b><span class="lbl">Best</span><b>${profile.best.salto || 0} levels</b></div>
+      <p>Take a screenshot to show how far you climbed!</p>
+      <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="home">Choose another game</button></div>
+    </section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  document.getElementById('again').addEventListener('click', startJump);
+  document.getElementById('home').addEventListener('click', showHome);
+  document.getElementById('again').focus({ preventScroll: true });
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Race ---------- */
+let race = null;
+function startRace() {
+  state = { id: 'carrera' };
+  race = { round: 0, rounds: [{ name: 'Los días', list: DIAS, max: 60 }, { name: 'Los meses', list: MESES, max: 90 }], scores: [] };
+  raceRound();
+}
+function raceRound() {
+  clearInterval(raceTimer);
+  const R = race.rounds[race.round];
+  race.next = 0; race.mistakes = 0; race.t0 = performance.now(); race.finished = false;
+  const order = shuffle(R.list.map((_, k) => k));
+  view.innerHTML = gameHead('La carrera', `Round ${race.round + 1} of 2 · ${R.name}`, race.round * 50) +
+    `<section class="stage" id="stage"><p class="ask">Tap ${race.round === 0 ? 'the days of the week' : 'the months of the year'} in order, starting with <b>${R.list[0]}</b>.</p>
+     <div class="timer" id="timer">0,0 s</div>
+     <div class="tiles">${order.map(k => `<button class="tile" data-k="${k}">${R.list[k]}</button>`).join('')}</div>
+     <p class="sub" id="race-info">Mistakes: 0</p><div id="fb"></div></section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  raceTimer = setInterval(() => {
+    const el = document.getElementById('timer');
+    if (el) el.textContent = ((performance.now() - race.t0) / 1000).toFixed(1).replace('.', ',') + ' s';
+  }, 100);
+  view.querySelectorAll('.tile').forEach(t => t.addEventListener('click', () => tapTile(t)));
+}
+function tapTile(t) {
+  if (race.finished || t.classList.contains('done')) return;
+  const k = +t.dataset.k, R = race.rounds[race.round];
+  if (k === race.next) {
+    t.classList.add('done'); t.insertAdjacentHTML('beforeend', `<span class="n">${k + 1}</span>`);
+    race.next++;
+    if (race.next === R.list.length) endRaceRound();
+  } else {
+    race.mistakes++;
+    document.getElementById('race-info').textContent = 'Mistakes: ' + race.mistakes;
+    t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake');
+  }
+}
+function endRaceRound() {
+  race.finished = true; clearInterval(raceTimer);
+  const R = race.rounds[race.round];
+  const secs = (performance.now() - race.t0) / 1000;
+  const pts = Math.max(10, Math.round(R.max - secs - 5 * race.mistakes));
+  race.scores.push(pts); addPoints(pts);
+  document.getElementById('timer').textContent = secs.toFixed(1).replace('.', ',') + ' s';
+  const last = race.round === race.rounds.length - 1;
+  document.getElementById('fb').innerHTML = `<div class="feedback good"><strong class="t">¡Terminado! +${pts}</strong>
+    <span>${secs.toFixed(1).replace('.', ',')} seconds and ${race.mistakes} ${race.mistakes === 1 ? 'mistake' : 'mistakes'}.</span></div>
+    <div class="row" style="margin-top:12px"><button class="btn blue" id="next">${last ? 'See results' : 'Next round: los meses →'}</button></div>`;
+  const nx = document.getElementById('next');
+  nx.addEventListener('click', () => { if (last) raceResults(); else { race.round++; raceRound(); } });
+  nx.focus({ preventScroll: true });
+}
+function raceResults() {
+  gameRec('carrera').plays++; saveProfile();
+  const total = race.scores.reduce((a, b) => a + b, 0), isNew = saveBest('carrera', total);
+  view.innerHTML = gameHead('La carrera', `${total} points`, 100) +
+    `<section class="stage result" id="result"><div class="stars">${stars(total / 120)}</div>
+      <div class="points">${total}</div><p>points · días: ${race.scores[0]} · meses: ${race.scores[1]}</p>
+      <p style="color:var(--ink);font-size:1.2rem;font-weight:900">${isNew ? '¡Nuevo récord!' : 'Can you go faster?'}</p>
+      <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="home">Choose another game</button></div></section>`;
+  document.getElementById('back').addEventListener('click', showHome);
+  document.getElementById('again').addEventListener('click', startRace);
+  document.getElementById('home').addEventListener('click', showHome);
+}
+
+/* ---------- Keyboard: 1–4 pick an answer ---------- */
+document.addEventListener('keydown', e => {
+  if (state && state.id === 'salto' && jump && !jump.locked) {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft' || e.key === '1') { e.preventDefault(); chooseJump(0); }
+    else if (e.key === 'ArrowRight' || e.key === '2') { e.preventDefault(); chooseJump(1); }
+    return;
+  }
+  if (!state || !state.q || state.q.kind !== 'mc' || state.answered) return;
+  if (e.target && e.target.tagName === 'INPUT') return;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 4) { const b = view.querySelectorAll('.opt')[n - 1]; if (b) b.click(); }
+});
+
+/* ---------- Boot ---------- */
+function boot(data) {
+  const saved = store.get('profile', null) || (data && data.profile) || {};
+  profile = Object.assign({ name: '', total: 0, best: {}, games: {} }, saved);
+  if (!profile.games) profile.games = {};
+  const nameIn = document.getElementById('player-name');
+  nameIn.value = profile.name || '';
+  nameIn.addEventListener('input', () => { profile.name = nameIn.value; saveProfile(); });
+  document.getElementById('total-n').textContent = profile.total;
+  showHome();
+}
+window.__jdt = { timePhrase, normalize, get state() { return state; }, get race() { return race; }, get jump() { return jump; } };
+if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function') window.claude.hot.snapshot(() => ({ profile }));
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
+else boot((window.claude && window.claude.hot && window.claude.hot.data) || {});
+</script>
+
+</body>
+</html>
